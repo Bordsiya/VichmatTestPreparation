@@ -375,3 +375,48 @@ def bessel_interpolation(table_function: TableFunction, x: float):
             n += (comp_t * (t - 0.5) / get_factorial(i)) * get_lambda(i, x_0 - ((i - 1)//2), table_function)
             comp_t *= (t + last_number)
     return n
+
+
+def spline_cube_interpolation(table_function: TableFunction, x_arg: float):
+
+    x = table_function.x_arr
+    y = table_function.y_arr
+    n = table_function.n
+    matrix_coefficients = [[0.0] * n] * n
+    h_arr =[]
+    for i in range(n - 1):
+        h = x[i + 1] - x[i]
+        if h < 0:
+            return None
+        h_arr.append(h)
+    for i in range(0, n, 1):
+        if i == 0 or i == n - 1:
+            matrix_coefficients[i][i] = 1
+        else:
+            matrix_coefficients[i][i] = 2 * (h_arr[i] + h_arr[i + 1])
+            if i != n - 2:
+                matrix_coefficients[i][i + 1] = h_arr[i + 1]
+                matrix_coefficients[i + 1][i] = h_arr[i + 1]
+
+    matrix_coefficients[1][0] = h_arr[0]
+    matrix_coefficients[n - 2][n - 1] = h_arr[len(h_arr) - 1]
+
+    matrix_answers = [0.0] * n
+    for i in range(1, n - 1):
+        matrix_answers[i] = 3 * ((y[i + 1] - y[i]) / h_arr[i + 1] - (y[i] - y[i - 1]) / h_arr[i])
+
+    c_coeffcicients = kramer_method(matrix_coefficients, matrix_answers)
+    a_coefficients = []
+    b_coefficients = []
+    d_coefficients = []
+    for i in range(1, n):
+        a_coefficients.append(y[i])
+        d_coefficients.append((c_coeffcicients[i] - c_coeffcicients[i - 1]) / h_arr[i])
+        b_coefficients.append((y[i] - y[i - 1]) / h_arr[i] + c_coeffcicients[i] * h_arr[i] / 3
+                              + c_coeffcicients[i - 1] * h_arr[i] / 6)
+
+    for i in range(n - 1):
+        if (x_arg > x[i]) and (x_arg < x[i + 1]):
+            return a_coefficients[i] - b_coefficients[i] * (x_arg - x[i - 1]) \
+                   + c_coeffcicients[i] * (x_arg - x[i - 1])**2 - d_coefficients[i] * (x_arg - x[i - 1])**3
+
